@@ -9,6 +9,7 @@ import com.langchao.ai.constant.CommonConstant;
 import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
 import com.langchao.ai.manager.AiManager;
+import com.langchao.ai.manager.RedisLimitManager;
 import com.langchao.ai.mapper.MessageMapper;
 import com.langchao.ai.model.dto.message.MessageQueryRequest;
 import com.langchao.ai.model.dto.message.MessageSendRequest;
@@ -47,6 +48,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
 
     @Resource
     private AiManager aiManager;
+
+    @Resource
+    private RedisLimitManager redisLimitManager;
 
     @Override
     public void validMessage(Message message, boolean add) {
@@ -140,8 +144,11 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         Integer type = messageSendRequest.getType();
         MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
         ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "消息类型不合法");
-        // 存入消息
 
+        // 启动限流器
+        redisLimitManager.doRateLimit("sendMessageByAi_" + loginUser.getId());
+
+        // 存入消息
         Message message = new Message();
         message.setUserId(loginUser.getId());
         message.setChatWindowId(chatWindowId);
