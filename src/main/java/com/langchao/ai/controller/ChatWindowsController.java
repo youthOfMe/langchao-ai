@@ -15,6 +15,7 @@ import com.langchao.ai.model.dto.chatwindows.ChatWindowsQueryRequest;
 import com.langchao.ai.model.dto.chatwindows.ChatWindowsUpdateRequest;
 import com.langchao.ai.model.entity.ChatWindows;
 import com.langchao.ai.model.entity.User;
+import com.langchao.ai.model.enums.ChatWindowsEnum;
 import com.langchao.ai.model.vo.ChatWindowsVO;
 import com.langchao.ai.service.ChatWindowsService;
 import com.langchao.ai.service.UserService;
@@ -41,6 +42,17 @@ public class ChatWindowsController {
     @Resource
     private UserService userService;
 
+    @PostMapping("/create")
+    public BaseResponse<Boolean> createChatWindows(@RequestParam("type") Integer type, HttpServletRequest request) {
+        // 校验参数
+        ChatWindowsEnum enumByValue = ChatWindowsEnum.getEnumByValue(type);
+        ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "类型参数错误！");
+        // 判断用户是否登录
+        User loginUser = userService.getLoginUser(request);
+        Boolean isSuccess = chatWindowsService.createChatWindows(type, loginUser);
+        return ResultUtils.success(isSuccess);
+    }
+
     // region 增删改查
 
     /**
@@ -56,6 +68,9 @@ public class ChatWindowsController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
+        if (!userService.isAdmin(loginUser)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
         ChatWindows chatWindows = new ChatWindows();
         BeanUtils.copyProperties(chatWindowsAddRequest, chatWindows);
         chatWindowsService.validChatWindows(chatWindows, true);

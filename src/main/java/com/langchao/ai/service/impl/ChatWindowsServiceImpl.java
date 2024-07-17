@@ -101,6 +101,17 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
         }
         return chatWindowsVOPage;
     }
+
+    @Override
+    public Boolean createChatWindows(Integer type, User loginUser) {
+        ChatWindows chatWindows = new ChatWindows();
+        chatWindows.setUserId(loginUser.getId());
+        chatWindows.setType(type);
+        boolean isSuccess = this.save(chatWindows);
+        ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "创建会话失败！");
+
+        return isSuccess;
+    }
 }
 
 

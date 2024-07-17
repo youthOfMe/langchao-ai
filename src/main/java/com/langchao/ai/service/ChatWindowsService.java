@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.langchao.ai.model.dto.chatwindows.ChatWindowsQueryRequest;
 import com.langchao.ai.model.entity.ChatWindows;
+import com.langchao.ai.model.entity.User;
 import com.langchao.ai.model.vo.ChatWindowsVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -48,4 +49,13 @@ public interface ChatWindowsService extends IService<ChatWindows> {
      * @return
      */
     Page<ChatWindowsVO> getChatWindowsVOPage(Page<ChatWindows> chatWindowsPage, HttpServletRequest request);
+
+    /**
+     * 用户创建会话
+     *
+     * @param type
+     * @param loginUser
+     * @return
+     */
+    Boolean createChatWindows(Integer type, User loginUser);
 }
