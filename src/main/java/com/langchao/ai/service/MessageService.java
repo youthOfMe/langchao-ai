@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.langchao.ai.model.dto.message.MessageQueryRequest;
+import com.langchao.ai.model.dto.message.MessageSendRequest;
 import com.langchao.ai.model.entity.Message;
-import com.langchao.ai.model.entity.User;
 import com.langchao.ai.model.vo.MessageVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -50,11 +50,11 @@ public interface MessageService extends IService<Message> {
     Page<MessageVO> getMessageVOPage(Page<Message> messagePage, HttpServletRequest request);
 
     /**
-     * 用户创建会话
+     * 发送消息
      *
-     * @param type
-     * @param loginUser
+     * @param messageService
+     * @param request
      * @return
      */
-    Boolean createMessage(Integer type, User loginUser);
+    Boolean sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request);
 }

@@ -9,13 +9,9 @@ import com.langchao.ai.common.ResultUtils;
 import com.langchao.ai.constant.UserConstant;
 import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
-import com.langchao.ai.model.dto.message.MessageAddRequest;
-import com.langchao.ai.model.dto.message.MessageEditRequest;
-import com.langchao.ai.model.dto.message.MessageQueryRequest;
-import com.langchao.ai.model.dto.message.MessageUpdateRequest;
+import com.langchao.ai.model.dto.message.*;
 import com.langchao.ai.model.entity.Message;
 import com.langchao.ai.model.entity.User;
-import com.langchao.ai.model.enums.MessageEnum;
 import com.langchao.ai.model.vo.MessageVO;
 import com.langchao.ai.service.MessageService;
 import com.langchao.ai.service.UserService;
@@ -42,21 +38,15 @@ public class MessageController {
     private UserService userService;
 
     /**
-     * 创建会话
+     * 发送消息
      *
-     * @param type
-     * @param request
+     * @param messageSendRequest
      * @return
      */
-    @PostMapping("/create")
-    public BaseResponse<Boolean> createMessage(@RequestParam("type") Integer type, HttpServletRequest request) {
-        // 校验参数
-        MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
-        ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "类型参数错误！");
-        // 判断用户是否登录
-        User loginUser = userService.getLoginUser(request);
-        Boolean isSuccess = messageService.createMessage(type, loginUser);
-        return ResultUtils.success(isSuccess);
+    @PostMapping("/sendMessage")
+    public BaseResponse<Boolean> SendMessage(@RequestBody MessageSendRequest messageSendRequest, HttpServletRequest request) {
+        Boolean isSusscess = messageService.sendMessage(messageSendRequest, request);
+        return ResultUtils.success(isSusscess);
     }
 
     // public BaseResponse<>
@@ -84,7 +74,7 @@ public class MessageController {
         Message message = new Message();
         BeanUtils.copyProperties(messageAddRequest, message);
         messageService.validMessage(message, true);
-        message.setUserId(loginUser.getId());
+        message.setUserId(messageAddRequest.getUserId());
         boolean result = messageService.save(message);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         long newMessageId = message.getId();

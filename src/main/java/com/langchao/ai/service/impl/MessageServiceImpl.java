@@ -10,6 +10,7 @@ import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
 import com.langchao.ai.mapper.MessageMapper;
 import com.langchao.ai.model.dto.message.MessageQueryRequest;
+import com.langchao.ai.model.dto.message.MessageSendRequest;
 import com.langchao.ai.model.entity.ChatWindows;
 import com.langchao.ai.model.entity.Message;
 import com.langchao.ai.model.entity.User;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Objects;
 
 /**
 * @author 20406
@@ -109,15 +111,41 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         return messageVOPage;
     }
 
+    /**
+     * 发送消息
+     * @param messageSendRequest
+     * @param request
+     * @return
+     */
     @Override
-    public Boolean createMessage(Integer type, User loginUser) {
+    public Boolean sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request) {
+        // 校验是否登录
+        User loginUser = userService.getLoginUser(request);
+        // 校验消息
+        String content = messageSendRequest.getContent();
+        ThrowUtils.throwIf(StringUtils.isEmpty(content), ErrorCode.PARAMS_ERROR, "消息不可为空！");
+        ThrowUtils.throwIf(content.length() > 512, ErrorCode.PARAMS_ERROR, "消息不可长于512");
+        // 校验当前窗口是否为用户可用
+        long chatWindowId = messageSendRequest.getChatWindowId();
+        ThrowUtils.throwIf(chatWindowId <= 0, ErrorCode.PARAMS_ERROR, "当前窗口ID不可为空");
+        ChatWindows chatWindows = chatWindowsService.getById(chatWindowId);
+        ThrowUtils.throwIf(chatWindows == null, ErrorCode.PARAMS_ERROR, "请求窗口不存在");
+        ThrowUtils.throwIf(!Objects.equals(chatWindows.getUserId(), loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "非法请求");
+        // 校验消息类型是否合法
+        Integer type = messageSendRequest.getType();
+        MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
+        ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "消息类型不合法");
+        // 存入消息
         Message message = new Message();
         message.setUserId(loginUser.getId());
+        message.setChatWindowId(chatWindowId);
         message.setType(type);
-        boolean isSuccess = this.save(message);
-        ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "创建会话失败！");
+        message.setContent(content);
+        boolean save = this.save(message);
 
-        return isSuccess;
+        // todo 发送消息给AI
+
+        return true;
     }
 }
 

@@ -84,7 +84,7 @@ public class ChatWindowsController {
         ChatWindows chatWindows = new ChatWindows();
         BeanUtils.copyProperties(chatWindowsAddRequest, chatWindows);
         chatWindowsService.validChatWindows(chatWindows, true);
-        chatWindows.setUserId(loginUser.getId());
+        chatWindows.setUserId(chatWindowsAddRequest.getUserId());
         boolean result = chatWindowsService.save(chatWindows);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         long newChatWindowsId = chatWindows.getId();
