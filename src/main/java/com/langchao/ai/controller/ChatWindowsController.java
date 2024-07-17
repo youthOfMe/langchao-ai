@@ -27,9 +27,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 帖子接口
+ * 聊天窗口接口
  *
-
  */
 @RestController
 @RequestMapping("/chatWindows")
