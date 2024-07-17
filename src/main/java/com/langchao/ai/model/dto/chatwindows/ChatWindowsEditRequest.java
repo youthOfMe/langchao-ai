@@ -27,6 +27,11 @@ public class ChatWindowsEditRequest implements Serializable {
      */
     private Integer type;
 
+    /**
+     * 会话标题
+     */
+    private String title;
+
 
     private static final long serialVersionUID = 1L;
 }

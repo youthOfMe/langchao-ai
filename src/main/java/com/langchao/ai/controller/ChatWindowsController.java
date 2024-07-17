@@ -42,6 +42,13 @@ public class ChatWindowsController {
     @Resource
     private UserService userService;
 
+    /**
+     * 创建会话
+     *
+     * @param type
+     * @param request
+     * @return
+     */
     @PostMapping("/create")
     public BaseResponse<Boolean> createChatWindows(@RequestParam("type") Integer type, HttpServletRequest request) {
         // 校验参数
@@ -52,6 +59,10 @@ public class ChatWindowsController {
         Boolean isSuccess = chatWindowsService.createChatWindows(type, loginUser);
         return ResultUtils.success(isSuccess);
     }
+
+    // public BaseResponse<>
+
+
 
     // region 增删改查
 

@@ -31,6 +31,11 @@ public class ChatWindowsVO implements Serializable {
     private Integer type;
 
     /**
+     * 会话标题
+     */
+    private String title;
+
+    /**
      * 创建时间
      */
     private Date createTime;

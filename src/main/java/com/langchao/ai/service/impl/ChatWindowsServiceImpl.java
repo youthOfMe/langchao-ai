@@ -19,7 +19,6 @@ import com.langchao.ai.service.UserService;
 import com.langchao.ai.utils.SqlUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -38,9 +37,6 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
     @Resource
     private UserService userService;
 
-    @Resource
-    private ElasticsearchRestTemplate elasticsearchRestTemplate;
-
     @Override
     public void validChatWindows(ChatWindows chatWindows, boolean add) {
         if (chatWindows == null) {
@@ -48,6 +44,7 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
         }
         Long userId = chatWindows.getUserId();
         Integer type = chatWindows.getType();
+        String title = chatWindows.getTitle();
         // 创建时，参数不能为空
         // 查询用户是否存在
         User user = userService.getById(userId);
@@ -55,6 +52,8 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
         // 判断类型信息是否正确
         ChatWindowsEnum typeEnum = ChatWindowsEnum.getEnumByValue(type);
         ThrowUtils.throwIf(typeEnum == null, ErrorCode.PARAMS_ERROR, "窗口类型错误！");
+        // 判断会话标题 用户可能会发空格
+        ThrowUtils.throwIf(StringUtils.isEmpty(title), ErrorCode.PARAMS_ERROR, "标题不可为空！");
     }
 
     /**
@@ -107,6 +106,7 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
         ChatWindows chatWindows = new ChatWindows();
         chatWindows.setUserId(loginUser.getId());
         chatWindows.setType(type);
+        chatWindows.setTitle("新对话");
         boolean isSuccess = this.save(chatWindows);
         ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "创建会话失败！");
 
