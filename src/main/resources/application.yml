@@ -99,3 +99,7 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.langchao.ai.controller
+yuapi:
+  client:
+    access-key: ${yuapi.client.access-key}
+    secret-key: ${yuapi.client.secret-key}

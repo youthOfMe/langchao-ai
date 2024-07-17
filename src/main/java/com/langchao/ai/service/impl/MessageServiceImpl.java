@@ -8,6 +8,7 @@ import com.langchao.ai.common.ErrorCode;
 import com.langchao.ai.constant.CommonConstant;
 import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
+import com.langchao.ai.manager.AiManager;
 import com.langchao.ai.mapper.MessageMapper;
 import com.langchao.ai.model.dto.message.MessageQueryRequest;
 import com.langchao.ai.model.dto.message.MessageSendRequest;
@@ -15,6 +16,7 @@ import com.langchao.ai.model.entity.ChatWindows;
 import com.langchao.ai.model.entity.Message;
 import com.langchao.ai.model.entity.User;
 import com.langchao.ai.model.enums.MessageEnum;
+import com.langchao.ai.model.vo.MessageSendVO;
 import com.langchao.ai.model.vo.MessageVO;
 import com.langchao.ai.service.ChatWindowsService;
 import com.langchao.ai.service.MessageService;
@@ -42,6 +44,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
 
     @Resource
     private ChatWindowsService chatWindowsService;
+
+    @Resource
+    private AiManager aiManager;
 
     @Override
     public void validMessage(Message message, boolean add) {
@@ -118,7 +123,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
      * @return
      */
     @Override
-    public Boolean sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request) {
+    public MessageSendVO sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request) {
         // 校验是否登录
         User loginUser = userService.getLoginUser(request);
         // 校验消息
@@ -136,16 +141,35 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
         ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "消息类型不合法");
         // 存入消息
+
         Message message = new Message();
         message.setUserId(loginUser.getId());
         message.setChatWindowId(chatWindowId);
         message.setType(type);
         message.setContent(content);
-        boolean save = this.save(message);
+        boolean saveUserMes = this.save(message);
+        ThrowUtils.throwIf(!saveUserMes, ErrorCode.SYSTEM_ERROR, "发送消息失败！");
 
         // todo 发送消息给AI
+        long aiModeId = 1813472675464413185L;
+        // 调用 AI
+        String result = aiManager.doChat(aiModeId, content);
+        // String result = "AI响应成功！";
+        // 存储AI信息调用信息
+        Message aiMessage = new Message();
+        aiMessage.setUserId(loginUser.getId());
+        aiMessage.setChatWindowId(chatWindowId);
+        aiMessage.setType(type);
+        aiMessage.setContent(result);
+        boolean saveAiMes = this.save(aiMessage);
+        ThrowUtils.throwIf(!saveAiMes, ErrorCode.SYSTEM_ERROR, "AI调用失败！");
 
-        return true;
+        // 构造返回信息
+        MessageSendVO messageSendVO = new MessageSendVO();
+        messageSendVO.setUserMessage(content);
+        messageSendVO.setAiMessage(result);
+
+        return messageSendVO;
     }
 }
 

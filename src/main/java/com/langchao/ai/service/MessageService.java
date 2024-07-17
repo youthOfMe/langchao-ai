@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.langchao.ai.model.dto.message.MessageQueryRequest;
 import com.langchao.ai.model.dto.message.MessageSendRequest;
 import com.langchao.ai.model.entity.Message;
+import com.langchao.ai.model.vo.MessageSendVO;
 import com.langchao.ai.model.vo.MessageVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -56,5 +57,5 @@ public interface MessageService extends IService<Message> {
      * @param request
      * @return
      */
-    Boolean sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request);
+    MessageSendVO sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request);
 }

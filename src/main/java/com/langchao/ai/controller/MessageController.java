@@ -12,6 +12,7 @@ import com.langchao.ai.exception.ThrowUtils;
 import com.langchao.ai.model.dto.message.*;
 import com.langchao.ai.model.entity.Message;
 import com.langchao.ai.model.entity.User;
+import com.langchao.ai.model.vo.MessageSendVO;
 import com.langchao.ai.model.vo.MessageVO;
 import com.langchao.ai.service.MessageService;
 import com.langchao.ai.service.UserService;
@@ -44,9 +45,9 @@ public class MessageController {
      * @return
      */
     @PostMapping("/sendMessage")
-    public BaseResponse<Boolean> SendMessage(@RequestBody MessageSendRequest messageSendRequest, HttpServletRequest request) {
-        Boolean isSusscess = messageService.sendMessage(messageSendRequest, request);
-        return ResultUtils.success(isSusscess);
+    public BaseResponse<MessageSendVO> SendMessage(@RequestBody MessageSendRequest messageSendRequest, HttpServletRequest request) {
+        MessageSendVO messageSendVO = messageService.sendMessage(messageSendRequest, request);
+        return ResultUtils.success(messageSendVO);
     }
 
     // public BaseResponse<>
