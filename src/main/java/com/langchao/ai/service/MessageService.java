@@ -11,6 +11,7 @@ import com.langchao.ai.model.vo.MessageVO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -69,7 +70,7 @@ public interface MessageService extends IService<Message> {
      * @param request
      * @return
      */
-    SseEmitter sendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request);
+    SseEmitter sendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request) throws IOException;
 
     /**
      * 获取消息列表

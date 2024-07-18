@@ -23,7 +23,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.List;
+
+import static com.langchao.ai.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * 消息
@@ -58,8 +61,12 @@ public class MessageController {
      * @param messageSendRequest
      * @return
      */
-    @PostMapping("/sendMessageAsync")
-    public SseEmitter SendMessageAsync(@RequestBody MessageSendRequest messageSendRequest, HttpServletRequest request) {
+    @GetMapping("/sendMessageAsync")
+    public SseEmitter SendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request) throws IOException {
+        User user = new User();
+        user.setId(1813448453555847170L);
+        userService.getById(user);
+        request.getSession().setAttribute(USER_LOGIN_STATE, user);
         SseEmitter sseEmitter = messageService.sendMessageAsync(messageSendRequest, request);
         return sseEmitter;
     }

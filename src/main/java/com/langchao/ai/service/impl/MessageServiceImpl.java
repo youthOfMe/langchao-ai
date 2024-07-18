@@ -36,6 +36,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -201,7 +202,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
     }
 
     @Override
-    public SseEmitter sendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request) {
+    public SseEmitter sendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request) throws IOException {
         // 校验是否登录
         User loginUser = userService.getLoginUser(request);
         // 校验消息
@@ -247,7 +248,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         RejectTask rejectTask = new RejectTask();
         rejectTask.setUserId(loginUser.getId());
         rejectTask.setChatWindowId(chatWindowId);
-        rejectTask.setTask("");
+        rejectTask.setTask(content);
         rejectTask.setIsNotify(1);
         boolean isSuccess = rejectTaskService.save(rejectTask);
         ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "系统出错！");
@@ -255,7 +256,18 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         // 异步化系统
         CallRunable callRunable = new CallRunable(() -> {
             doAsyncAI.asyncUserAI(loginUser.getId(), chatWindowId, sseEmitter, chatWindows, rejectTask, content);
-        }, chatWindowId, loginUser.getId(), content);
+        }, chatWindowId, loginUser.getId(), content, sseEmitter);
+
+        // 判断任务数据库中是否还有更早的任务
+        QueryWrapper<RejectTask> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("isNotify", 0);
+        RejectTask task = rejectTaskService.getOne(queryWrapper);
+        if (task != null) {
+            sseEmitter.send("任务被挂起");
+            sseEmitter.complete();
+            return sseEmitter;
+        }
+
         threadPoolExecutor.execute(callRunable);
 
         return sseEmitter;

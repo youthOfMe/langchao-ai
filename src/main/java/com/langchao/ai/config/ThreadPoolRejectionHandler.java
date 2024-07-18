@@ -5,6 +5,7 @@ import com.langchao.ai.model.entity.RejectTask;
 import com.langchao.ai.service.RejectTaskService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -27,6 +28,10 @@ public class ThreadPoolRejectionHandler implements RejectedExecutionHandler {
             Long chatWindowsId = customRunnable.getChatWindowsId();
             Long userId = customRunnable.getUserId();
             String content = customRunnable.getContent();
+            SseEmitter sseEmitter = customRunnable.getSseEmitter();
+            if (sseEmitter != null) {
+                sseEmitter.complete();
+            }
             // 进行执行持久化任务
             QueryWrapper<RejectTask> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("userId", userId);
