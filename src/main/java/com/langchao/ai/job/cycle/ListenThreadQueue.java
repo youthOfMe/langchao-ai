@@ -13,10 +13,6 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.concurrent.ThreadPoolExecutor;
 
-/**
- * 作者：洋哥
- * 描述：牛逼
- */
 @Slf4j
 @Component
 public class ListenThreadQueue {
@@ -40,7 +36,7 @@ public class ListenThreadQueue {
     public void run() {
         // todo 最好还是加把锁
         // 监听队列是否为空
-        if (threadPoolExecutor.getTaskCount() > threadPoolExecutor.getMaximumPoolSize()) {
+        if (threadPoolExecutor.getTaskCount() < 2 || threadPoolExecutor.getTaskCount() > 3) {
             return;
         }
         // 先查出任务
