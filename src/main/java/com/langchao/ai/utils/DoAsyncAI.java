@@ -41,8 +41,8 @@ public class DoAsyncAI {
         // todo 发送消息给AI
         long aiModeId = 1813472675464413185L;
         // 调用 AI
-        String result = aiManager.doChat(aiModeId, content);
-        // String result = "AI响应成功！";
+        // String result = aiManager.doChat(aiModeId, content);
+        String result = "AI响应成功！";
         // 存储AI信息调用信息
         Message aiMessage = new Message();
         aiMessage.setUserId(userId);
@@ -53,15 +53,19 @@ public class DoAsyncAI {
         ThrowUtils.throwIf(!saveAiMes, ErrorCode.SYSTEM_ERROR, "AI调用失败！");
 
         try {
-            // 释放消息
-            sseEmitter.send(result);
+            if (sseEmitter != null) {
+                // 释放消息
+                sseEmitter.send(result);
+            }
             // 解锁对话
             chatWindows.setCanSend(0);
             chatWindowsService.updateById(chatWindows);
         } catch (IOException e) {
             log.error("消息推送失败: {}", e);
         } finally {
-            sseEmitter.complete();
+            if (sseEmitter != null) {
+                sseEmitter.complete();
+            }
         }
 
         // 判断是否要继续通知用户任务执行完毕

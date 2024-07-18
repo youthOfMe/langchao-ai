@@ -34,6 +34,7 @@ public class ThreadPoolRejectionHandler implements RejectedExecutionHandler {
             RejectTask task = rejectTaskService.getOne(queryWrapper);
             // 更新任务
             task.setTask(content);
+            task.setIsNotify(0);
             rejectTaskService.updateById(task);
         } else {
             System.out.println("Task was rejected, but it's not a CallRunnable instance.");
