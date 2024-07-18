@@ -8,8 +8,10 @@ import com.langchao.ai.model.dto.message.MessageSendRequest;
 import com.langchao.ai.model.entity.Message;
 import com.langchao.ai.model.vo.MessageSendVO;
 import com.langchao.ai.model.vo.MessageVO;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author 20406
@@ -53,9 +55,28 @@ public interface MessageService extends IService<Message> {
     /**
      * 发送消息
      *
-     * @param messageService
+     * @param messageSendRequest
      * @param request
      * @return
      */
     MessageSendVO sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request);
+
+
+    /**
+     * 发送消息（异步 + SSE）
+     *
+     * @param messageSendRequest
+     * @param request
+     * @return
+     */
+    SseEmitter sendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request);
+
+    /**
+     * 获取消息列表
+     *
+     * @param chatWindowsId
+     * @param request
+     * @return
+     */
+    List<Message> listMessage(Long chatWindowsId, HttpServletRequest request);
 }

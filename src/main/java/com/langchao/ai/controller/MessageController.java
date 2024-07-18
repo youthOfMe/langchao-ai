@@ -19,9 +19,11 @@ import com.langchao.ai.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 消息
@@ -48,6 +50,24 @@ public class MessageController {
     public BaseResponse<MessageSendVO> SendMessage(@RequestBody MessageSendRequest messageSendRequest, HttpServletRequest request) {
         MessageSendVO messageSendVO = messageService.sendMessage(messageSendRequest, request);
         return ResultUtils.success(messageSendVO);
+    }
+
+    /**
+     * 发送消息（异步化 + SSE推送）
+     *
+     * @param messageSendRequest
+     * @return
+     */
+    @PostMapping("/sendMessageAsync")
+    public SseEmitter SendMessageAsync(@RequestBody MessageSendRequest messageSendRequest, HttpServletRequest request) {
+        SseEmitter sseEmitter = messageService.sendMessageAsync(messageSendRequest, request);
+        return sseEmitter;
+    }
+
+    @PostMapping("/listMessage")
+    public BaseResponse<List<Message>> listMessage(Long chatWindowsId, HttpServletRequest request) {
+        List<Message> messageList = messageService.listMessage(chatWindowsId, request);
+        return ResultUtils.success(messageList);
     }
 
     // public BaseResponse<>
