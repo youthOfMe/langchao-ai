@@ -5,35 +5,40 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.langchao.ai.common.ErrorCode;
+import com.langchao.ai.config.CallRunable;
 import com.langchao.ai.constant.CommonConstant;
 import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
 import com.langchao.ai.manager.AiManager;
 import com.langchao.ai.manager.RedisLimitManager;
 import com.langchao.ai.mapper.MessageMapper;
+import com.langchao.ai.mapper.RejectTaskMapper;
 import com.langchao.ai.model.dto.message.MessageQueryRequest;
 import com.langchao.ai.model.dto.message.MessageSendRequest;
 import com.langchao.ai.model.entity.ChatWindows;
 import com.langchao.ai.model.entity.Message;
+import com.langchao.ai.model.entity.RejectTask;
 import com.langchao.ai.model.entity.User;
 import com.langchao.ai.model.enums.MessageEnum;
 import com.langchao.ai.model.vo.MessageSendVO;
 import com.langchao.ai.model.vo.MessageVO;
 import com.langchao.ai.service.ChatWindowsService;
 import com.langchao.ai.service.MessageService;
+import com.langchao.ai.service.RejectTaskService;
 import com.langchao.ai.service.UserService;
+import com.langchao.ai.utils.DoAsyncAI;
 import com.langchao.ai.utils.SqlUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
 * @author 20406
@@ -54,6 +59,19 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
 
     @Resource
     private RedisLimitManager redisLimitManager;
+
+    @Resource
+    private ThreadPoolExecutor threadPoolExecutor;
+
+    @Resource
+    private RejectTaskService rejectTaskService;
+
+    @Resource
+    private RejectTaskMapper rejectTaskMapper;
+
+    @Resource
+    @Lazy
+    private DoAsyncAI doAsyncAI;
 
     @Override
     public void validMessage(Message message, boolean add) {
@@ -195,7 +213,12 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         ThrowUtils.throwIf(chatWindowId <= 0, ErrorCode.PARAMS_ERROR, "当前窗口ID不可为空");
         ChatWindows chatWindows = chatWindowsService.getById(chatWindowId);
         ThrowUtils.throwIf(chatWindows == null, ErrorCode.PARAMS_ERROR, "请求窗口不存在");
+        // 判断窗口是否是用户创建的
         ThrowUtils.throwIf(!Objects.equals(chatWindows.getUserId(), loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "非法请求");
+
+        // 判断是否可以给AI继续发消息（AI是否正在生成中）
+        ThrowUtils.throwIf(chatWindows.getCanSend() == 1, ErrorCode.OPERATION_ERROR, "AI正在生成中！");
+
         // 校验消息类型是否合法
         Integer type = messageSendRequest.getType();
         MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
@@ -203,6 +226,10 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
 
         // 启动限流器
         redisLimitManager.doRateLimit("sendMessageByAi_" + loginUser.getId());
+
+        // 改变会话状态 不允许用户在正在生成中的时候进行调用会话AI
+        chatWindows.setCanSend(1);
+        chatWindowsService.updateById(chatWindows);
 
         // 存入消息
         Message message = new Message();
@@ -216,30 +243,20 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         // 建立SSE连接
         SseEmitter sseEmitter = new SseEmitter(0L);
 
-        // 异步化系统
-        CompletableFuture.runAsync(() -> {
-            // todo 发送消息给AI
-            long aiModeId = 1813472675464413185L;
-            // 调用 AI
-            String result = aiManager.doChat(aiModeId, content);
-            // String result = "AI响应成功！";
-            // 存储AI信息调用信息
-            Message aiMessage = new Message();
-            aiMessage.setUserId(loginUser.getId());
-            aiMessage.setChatWindowId(chatWindowId);
-            aiMessage.setType(MessageEnum.AI.getValue());
-            aiMessage.setContent(result);
-            boolean saveAiMes = this.save(aiMessage);
-            ThrowUtils.throwIf(!saveAiMes, ErrorCode.SYSTEM_ERROR, "AI调用失败！");
+        // 将任务推进到数据库中
+        RejectTask rejectTask = new RejectTask();
+        rejectTask.setUserId(loginUser.getId());
+        rejectTask.setChatWindowId(chatWindowId);
+        rejectTask.setTask("");
+        rejectTask.setIsNotify(1);
+        boolean isSuccess = rejectTaskService.save(rejectTask);
+        ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "系统出错！");
 
-            try {
-                sseEmitter.send(result);
-            } catch (IOException e) {
-                log.error("消息推送失败: {}", e);
-            } finally {
-                sseEmitter.complete();
-            }
-        });
+        // 异步化系统
+        CallRunable callRunable = new CallRunable(() -> {
+            doAsyncAI.asyncUserAI(loginUser.getId(), chatWindowId, sseEmitter, chatWindows, rejectTask, content);
+        }, chatWindowId, loginUser.getId(), content);
+        threadPoolExecutor.execute(callRunable);
 
         return sseEmitter;
     }

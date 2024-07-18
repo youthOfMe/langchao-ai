@@ -1,22 +1,25 @@
 package com.langchao.ai.model.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 窗口表
- * @TableName chat_windows
+ * 消息表
+ * @TableName reject_task
  */
-@TableName(value ="chat_windows")
+@TableName(value ="reject_task")
 @Data
-public class ChatWindows implements Serializable {
+public class RejectTask implements Serializable {
     /**
      * id
      */
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -25,19 +28,19 @@ public class ChatWindows implements Serializable {
     private Long userId;
 
     /**
-     * 窗口类型 1 = 紧急政务窗口 0 = 普通窗口
+     * 窗口ID
      */
-    private Integer type;
+    private Long chatWindowId;
 
     /**
-     * 会话标题
+     * 窗口ID
      */
-    private String title;
+    private String task;
 
     /**
-     * 是否可以继续给AI发消息 0 = 可以 1 = 不可用
+     * 是否通知 0 = 通知 1 = 不通知
      */
-    private Integer canSend;
+    private Integer isNotify;
 
     /**
      * 创建时间
@@ -52,7 +55,6 @@ public class ChatWindows implements Serializable {
     /**
      * 是否删除
      */
-    @TableLogic
     private Integer isDelete;
 
     @TableField(exist = false)

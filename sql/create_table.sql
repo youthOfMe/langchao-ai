@@ -47,3 +47,15 @@ create table if not exists message
     isDelete     tinyint      default 0                 not null comment '是否删除',
     index idx_chatWindowId (chatWindowId)
 ) comment '消息表' collate = utf8mb4_unicode_ci;
+
+-- 拒绝任务表
+create table if not exists reject_task
+(
+    id           bigint auto_increment comment 'id' primary key,
+    userId  bigint                           not null comment '用户ID',
+    chatWindowId bigint                      not null comment '窗口ID',
+    task text                      not null comment '窗口ID',
+    createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete     tinyint      default 0                 not null comment '是否删除',
+) comment '消息表' collate = utf8mb4_unicode_ci;
