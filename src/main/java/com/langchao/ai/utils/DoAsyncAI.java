@@ -13,6 +13,7 @@ import com.langchao.ai.service.MessageService;
 import com.langchao.ai.service.RejectTaskService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
@@ -37,6 +38,7 @@ public class DoAsyncAI {
     @Resource
     private MessageService messageService;
 
+    @Transactional(rollbackFor = Exception.class)
     public void asyncUserAI(long userId, long chatWindowId, SseEmitter sseEmitter, ChatWindows chatWindows, RejectTask rejectTask, String content) {
         // todo 发送消息给AI
         long aiModeId = 1813472675464413185L;

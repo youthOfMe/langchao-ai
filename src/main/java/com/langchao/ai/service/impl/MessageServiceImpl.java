@@ -32,6 +32,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
@@ -202,6 +203,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public SseEmitter sendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request) throws IOException {
         // 校验是否登录
         User loginUser = userService.getLoginUser(request);
@@ -209,6 +211,10 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         String content = messageSendRequest.getContent();
         ThrowUtils.throwIf(StringUtils.isEmpty(content), ErrorCode.PARAMS_ERROR, "消息不可为空！");
         ThrowUtils.throwIf(content.length() > 512, ErrorCode.PARAMS_ERROR, "消息不可长于512");
+
+        // 启动限流器
+        redisLimitManager.doRateLimit("sendMessageByAi_" + loginUser.getId());
+
         // 校验当前窗口是否为用户可用
         long chatWindowId = messageSendRequest.getChatWindowId();
         ThrowUtils.throwIf(chatWindowId <= 0, ErrorCode.PARAMS_ERROR, "当前窗口ID不可为空");
@@ -225,9 +231,6 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
         ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "消息类型不合法");
 
-        // 启动限流器
-        redisLimitManager.doRateLimit("sendMessageByAi_" + loginUser.getId());
-
         // 改变会话状态 不允许用户在正在生成中的时候进行调用会话AI
         chatWindows.setCanSend(1);
         chatWindowsService.updateById(chatWindows);
@@ -241,9 +244,6 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         boolean saveUserMes = this.save(message);
         ThrowUtils.throwIf(!saveUserMes, ErrorCode.SYSTEM_ERROR, "发送消息失败！");
 
-        // 建立SSE连接
-        SseEmitter sseEmitter = new SseEmitter(0L);
-
         // 将任务推进到数据库中
         RejectTask rejectTask = new RejectTask();
         rejectTask.setUserId(loginUser.getId());
@@ -253,20 +253,24 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         boolean isSuccess = rejectTaskService.save(rejectTask);
         ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "系统出错！");
 
-        // 异步化系统
-        CallRunable callRunable = new CallRunable(() -> {
-            doAsyncAI.asyncUserAI(loginUser.getId(), chatWindowId, sseEmitter, chatWindows, rejectTask, content);
-        }, chatWindowId, loginUser.getId(), content, sseEmitter);
-
         // 判断任务数据库中是否还有更早的任务
         QueryWrapper<RejectTask> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("isNotify", 0);
         RejectTask task = rejectTaskService.getOne(queryWrapper);
         if (task != null) {
-            sseEmitter.send("任务被挂起");
-            sseEmitter.complete();
-            return sseEmitter;
+            rejectTask.setIsNotify(0);
+            isSuccess = rejectTaskService.updateById(rejectTask);
+            ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "系统出错！");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统负载严重");
         }
+
+        // 建立SSE连接
+        SseEmitter sseEmitter = new SseEmitter(0L);
+
+        // 异步化系统
+        CallRunable callRunable = new CallRunable(() -> {
+            doAsyncAI.asyncUserAI(loginUser.getId(), chatWindowId, sseEmitter, chatWindows, rejectTask, content);
+        }, chatWindowId, loginUser.getId(), content, sseEmitter);
 
         threadPoolExecutor.execute(callRunable);
 
