@@ -1,6 +1,7 @@
 package com.langchao.ai.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -10,6 +11,7 @@ import com.langchao.ai.constant.CommonConstant;
 import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
 import com.langchao.ai.manager.AiManager;
+import com.langchao.ai.manager.NewAiManager;
 import com.langchao.ai.manager.RedisLimitManager;
 import com.langchao.ai.mapper.MessageMapper;
 import com.langchao.ai.mapper.RejectTaskMapper;
@@ -38,6 +40,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -75,6 +78,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
     @Resource
     @Lazy
     private DoAsyncAI doAsyncAI;
+
+    @Resource
+    private NewAiManager newAiManager;
 
     @Override
     public void validMessage(Message message, boolean add) {
@@ -184,7 +190,8 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         // todo 发送消息给AI
         long aiModeId = 1813472675464413185L;
         // 调用 AI
-        String result = aiManager.doChat(aiModeId, content);
+        String result = newAiManager.doSyncStableRequest("你是中国政务大师", content);
+        // String result = aiManager.doChat(aiModeId, content);
         // String result = "AI响应成功！";
         // 存储AI信息调用信息
         Message aiMessage = new Message();
@@ -249,7 +256,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
             // todo 发送消息给AI
             long aiModeId = 1813472675464413185L;
             // 调用 AI
-            String result = aiManager.doChat(aiModeId, content);
+            String result = newAiManager.doSyncStableRequest("你是中国政务大师", content);
+            HashMap<String, String> hashMap = new HashMap<>();
+            hashMap.put("message", result);
             // String result = "AI响应成功！";
             // 存储AI信息调用信息
             Message aiMessage = new Message();
@@ -260,7 +269,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
             boolean saveAiMes = this.save(aiMessage);
             ThrowUtils.throwIf(!saveAiMes, ErrorCode.SYSTEM_ERROR, "AI调用失败！");
             try {
-                sseEmitter.send(result);
+                sseEmitter.send(JSONUtil.toJsonStr(hashMap));
                 sseEmitter.complete();
             } catch (IOException e) {
                 e.printStackTrace();

@@ -102,3 +102,6 @@ yuapi:
   client:
     access-key: ${yuapi.client.access-key}
     secret-key: ${yuapi.client.secret-key}
+# AI配置
+ai:
+  apiKey: ${ai.apiKey}

@@ -102,15 +102,15 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
     }
 
     @Override
-    public Boolean createChatWindows(Integer type, User loginUser) {
+    public Long createChatWindows(Integer type, User loginUser, String title) {
         ChatWindows chatWindows = new ChatWindows();
         chatWindows.setUserId(loginUser.getId());
+        chatWindows.setTitle(title);
         chatWindows.setType(type);
-        chatWindows.setTitle("新对话");
         boolean isSuccess = this.save(chatWindows);
         ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "创建会话失败！");
 
-        return isSuccess;
+        return chatWindows.getId();
     }
 }
 

@@ -52,14 +52,14 @@ public class ChatWindowsController {
      * @return
      */
     @PostMapping("/create")
-    public BaseResponse<Boolean> createChatWindows(@RequestParam("type") Integer type, HttpServletRequest request) {
+    public BaseResponse<Long> createChatWindows(@RequestParam("type") Integer type, String title, HttpServletRequest request) {
         // 校验参数
         ChatWindowsEnum enumByValue = ChatWindowsEnum.getEnumByValue(type);
         ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "类型参数错误！");
         // 判断用户是否登录
         User loginUser = userService.getLoginUser(request);
-        Boolean isSuccess = chatWindowsService.createChatWindows(type, loginUser);
-        return ResultUtils.success(isSuccess);
+        Long chatWindows = chatWindowsService.createChatWindows(type, loginUser, title);
+        return ResultUtils.success(chatWindows);
     }
 
     /**
@@ -67,7 +67,7 @@ public class ChatWindowsController {
      * @param request
      * @return
      */
-    @PostMapping
+    @GetMapping("/mylist")
     public BaseResponse<List<ChatWindowsVO>> listMyChatWindows(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         // 查询本人的聊天列表
