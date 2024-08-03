@@ -1,5 +1,6 @@
 package com.langchao.ai.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.langchao.ai.annotation.AuthCheck;
 import com.langchao.ai.common.BaseResponse;
@@ -25,6 +26,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 聊天窗口接口
@@ -59,7 +62,26 @@ public class ChatWindowsController {
         return ResultUtils.success(isSuccess);
     }
 
-    // public BaseResponse<>
+    /**
+     * 获取自己的会话列表
+     * @param request
+     * @return
+     */
+    @PostMapping
+    public BaseResponse<List<ChatWindowsVO>> listMyChatWindows(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        // 查询本人的聊天列表
+        QueryWrapper<ChatWindows> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userId", loginUser.getId());
+        List<ChatWindows> chatWindowList = chatWindowsService.list(queryWrapper);
+        List<ChatWindowsVO> chatWindowsVOList = new ArrayList<>();
+        chatWindowList.stream().forEach(item -> {
+            ChatWindowsVO chatWindowsVO = new ChatWindowsVO();
+            BeanUtils.copyProperties(item, chatWindowsVO);
+            chatWindowsVOList.add(chatWindowsVO);
+        });
+        return ResultUtils.success(chatWindowsVOList);
+    }
 
 
 

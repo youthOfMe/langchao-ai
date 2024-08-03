@@ -64,7 +64,7 @@ public interface MessageService extends IService<Message> {
 
 
     /**
-     * 发送消息（异步 + SSE）
+     * 发送消息（异步 + SSE + 容错处理机制）
      *
      * @param messageSendRequest
      * @param request
@@ -80,4 +80,13 @@ public interface MessageService extends IService<Message> {
      * @return
      */
     List<Message> listMessage(Long chatWindowsId, HttpServletRequest request);
+
+    /**
+     * 发送消息（异步 + SSE）
+     *
+     * @param messageSendRequest
+     * @param request
+     * @return
+     */
+    SseEmitter sendMessageSse(MessageSendRequest messageSendRequest, HttpServletRequest request);
 }

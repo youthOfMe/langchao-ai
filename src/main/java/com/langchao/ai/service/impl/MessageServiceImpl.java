@@ -40,6 +40,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -202,6 +203,73 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         return messageSendVO;
     }
 
+    /**
+     * 发送消息（异步化 + SSE推送）
+     *
+     * @param messageSendRequest
+     * @param request
+     * @return
+     */
+    @Override
+    public SseEmitter sendMessageSse(MessageSendRequest messageSendRequest, HttpServletRequest request) {
+        // 校验是否登录
+        User loginUser = userService.getLoginUser(request);
+        // 校验消息
+        String content = messageSendRequest.getContent();
+        ThrowUtils.throwIf(StringUtils.isEmpty(content), ErrorCode.PARAMS_ERROR, "消息不可为空！");
+        ThrowUtils.throwIf(content.length() > 512, ErrorCode.PARAMS_ERROR, "消息不可长于512");
+        // 校验当前窗口是否为用户可用
+        long chatWindowId = messageSendRequest.getChatWindowId();
+        ThrowUtils.throwIf(chatWindowId <= 0, ErrorCode.PARAMS_ERROR, "当前窗口ID不可为空");
+        ChatWindows chatWindows = chatWindowsService.getById(chatWindowId);
+        ThrowUtils.throwIf(chatWindows == null, ErrorCode.PARAMS_ERROR, "请求窗口不存在");
+        ThrowUtils.throwIf(!Objects.equals(chatWindows.getUserId(), loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "非法请求");
+        // 校验消息类型是否合法
+        Integer type = messageSendRequest.getType();
+        MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
+        ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "消息类型不合法");
+
+        // 启动限流器
+        redisLimitManager.doRateLimit("sendMessageByAi_" + loginUser.getId());
+
+        // 存入消息
+        Message message = new Message();
+        message.setUserId(loginUser.getId());
+        message.setChatWindowId(chatWindowId);
+        message.setType(type);
+        message.setContent(content);
+        boolean saveUserMes = this.save(message);
+        ThrowUtils.throwIf(!saveUserMes, ErrorCode.SYSTEM_ERROR, "发送消息失败！");
+
+        // 建立SSE连接
+        SseEmitter sseEmitter = new SseEmitter(0L);
+
+        // 发送消息给AI
+        CompletableFuture.runAsync(() -> {
+            // todo 发送消息给AI
+            long aiModeId = 1813472675464413185L;
+            // 调用 AI
+            String result = aiManager.doChat(aiModeId, content);
+            // String result = "AI响应成功！";
+            // 存储AI信息调用信息
+            Message aiMessage = new Message();
+            aiMessage.setUserId(loginUser.getId());
+            aiMessage.setChatWindowId(chatWindowId);
+            aiMessage.setType(MessageEnum.AI.getValue());
+            aiMessage.setContent(result);
+            boolean saveAiMes = this.save(aiMessage);
+            ThrowUtils.throwIf(!saveAiMes, ErrorCode.SYSTEM_ERROR, "AI调用失败！");
+            try {
+                sseEmitter.send(result);
+                sseEmitter.complete();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        return sseEmitter;
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SseEmitter sendMessageAsync(MessageSendRequest messageSendRequest, HttpServletRequest request) throws IOException {
@@ -296,6 +364,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         List<Message> messageList = this.list(queryWrapper);
         return messageList;
     }
+
 }
 
 

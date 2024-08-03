@@ -59,6 +59,20 @@ public class MessageController {
      * 发送消息（异步化 + SSE推送）
      *
      * @param messageSendRequest
+     * @param request
+     * @return
+     */
+    @GetMapping("/sendMessageSse")
+    public SseEmitter SendMessageSse(MessageSendRequest messageSendRequest, HttpServletRequest request) {
+        SseEmitter sseEmitter = messageService.sendMessageSse(messageSendRequest, request);
+        return sseEmitter;
+    }
+
+
+    /**
+     * 发送消息（异步化 + SSE推送 + 容错处理机制）
+     *
+     * @param messageSendRequest
      * @return
      */
     @GetMapping("/sendMessageAsync")
