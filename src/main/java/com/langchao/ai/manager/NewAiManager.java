@@ -77,7 +77,7 @@ public class NewAiManager {
     }
 
     /**
-     * 通用请求（简化消息传递）
+     * 通用请求
      *
      * @param messageList
      * @param stream
@@ -136,6 +136,51 @@ public class NewAiManager {
         try {
             ModelApiResponse invokeModelApiResp = clientV4.invokeModelApi(chatCompletionRequest);
             return invokeModelApiResp.getFlowable();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, e.getMessage());
+        }
+    }
+
+    /**
+     * 携带上下文请求（答案较稳定）
+     *
+     * @param systemMessage
+     * @param userMessage
+     * @return
+     */
+    public String doRequestAssistant(String systemMessage, String userMessage, String assistantMessage, String requestId) {
+        return doRequestAssistant(systemMessage, userMessage, assistantMessage, Boolean.FALSE, STABLE_TEMPERATURE, requestId);
+    }
+
+    /**
+     * 携带上下文请求
+     *
+     * @param systemMessage
+     * @param userMessage
+     * @param stream
+     * @param temperature
+     * @return
+     */
+    public String doRequestAssistant(String systemMessage, String userMessage, String assistantMessage, Boolean stream, Float temperature, String requestId) {
+        List<ChatMessage> chatMessageList = new ArrayList<>();
+        ChatMessage systemChatMessage = new ChatMessage(ChatMessageRole.SYSTEM.value(), systemMessage);
+        chatMessageList.add(systemChatMessage);
+        ChatMessage userChatMessage = new ChatMessage(ChatMessageRole.USER.value(), userMessage);
+        chatMessageList.add(userChatMessage);
+        ChatMessage assistantChatMessage = new ChatMessage(ChatMessageRole.ASSISTANT.value(), assistantMessage);
+        chatMessageList.add(assistantChatMessage);
+        ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest.builder()
+                .model(Constants.ModelChatGLM4)
+                .stream(stream)
+                .temperature(temperature)
+                .invokeMethod(Constants.invokeMethod)
+                .messages(chatMessageList)
+                .requestId(requestId)
+                .build();
+        try {
+            ModelApiResponse invokeModelApiResp = clientV4.invokeModelApi(chatCompletionRequest);
+            return invokeModelApiResp.getData().getChoices().get(0).getMessage().getContent().toString();
         } catch (Exception e) {
             e.printStackTrace();
             throw new BusinessException(ErrorCode.PARAMS_ERROR, e.getMessage());

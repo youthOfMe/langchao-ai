@@ -11,6 +11,7 @@ import com.langchao.ai.constant.CommonConstant;
 import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
 import com.langchao.ai.manager.AiManager;
+import com.langchao.ai.manager.AiMessageV1;
 import com.langchao.ai.manager.NewAiManager;
 import com.langchao.ai.manager.RedisLimitManager;
 import com.langchao.ai.mapper.MessageMapper;
@@ -30,6 +31,8 @@ import com.langchao.ai.service.RejectTaskService;
 import com.langchao.ai.service.UserService;
 import com.langchao.ai.utils.DoAsyncAI;
 import com.langchao.ai.utils.SqlUtils;
+import com.zhipu.oapi.service.v4.model.ChatMessage;
+import com.zhipu.oapi.service.v4.model.ChatMessageRole;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
@@ -40,6 +43,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -81,6 +85,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
 
     @Resource
     private NewAiManager newAiManager;
+
+    @Resource
+    private AiMessageV1 aiMessageV1;
 
     @Override
     public void validMessage(Message message, boolean add) {
@@ -192,12 +199,37 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
             chatWindowsService.updateById(chatWindows);
         }
 
+        // 查询出来上一次AI发了什么
+        QueryWrapper<Message> messageQueryWrapper = new QueryWrapper<>();
+        messageQueryWrapper.eq("chatWindowId", chatWindowId);
+        List<Message> messageList = this.list(messageQueryWrapper);
         // todo 发送消息给AI
         long aiModeId = 1813472675464413185L;
         // 调用 AI
-        String result = newAiManager.doSyncStableRequest("你是中国政务大师", content);
+        // String result = newAiManager.doSyncStableRequest("你是中国政务大师", content);
+
+        // String result;
+        // if (aiAssitantMessage == null) {
+        //     result = newAiManager.doRequestAssistant("你是中国政务大师", content, null, String.valueOf(chatWindowId + loginUser.getId()));
+        // } else {
+        //     result = newAiManager.doRequestAssistant("你是中国政务大师", content, aiAssitantMessage.getContent(), String.valueOf(chatWindowId + loginUser.getId()));
+        // }
+
         // String result = aiManager.doChat(aiModeId, content);
         // String result = "AI响应成功！";
+
+        String result;
+        List<ChatMessage> chatMessageList = new ArrayList<>();
+        // 读取上下文消息
+        for (Message sendMessage : messageList) {
+            if (Objects.equals(sendMessage.getType(), MessageEnum.USER.getValue())) {
+                chatMessageList.add(new ChatMessage(ChatMessageRole.USER.value(), sendMessage.getContent()));
+            } else if (Objects.equals(sendMessage.getType(), MessageEnum.AI.getValue())) {
+                chatMessageList.add(new ChatMessage(ChatMessageRole.ASSISTANT.value(), sendMessage.getContent()));
+            }
+        }
+        result = aiMessageV1.doRequest(chatMessageList);
+
         // 防止用户聊着聊着就把AI窗口删了，此时AI窗口还没生成完
         ChatWindows oldChatWindows = chatWindowsService.getById(chatWindowId);
         if (oldChatWindows == null) {
