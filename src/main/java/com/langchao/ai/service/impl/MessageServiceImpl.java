@@ -198,6 +198,11 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         String result = newAiManager.doSyncStableRequest("你是中国政务大师", content);
         // String result = aiManager.doChat(aiModeId, content);
         // String result = "AI响应成功！";
+        // 防止用户聊着聊着就把AI窗口删了，此时AI窗口还没生成完
+        ChatWindows oldChatWindows = chatWindowsService.getById(chatWindowId);
+        if (oldChatWindows == null) {
+            return null;
+        }
         // 存储AI信息调用信息
         Message aiMessage = new Message();
         aiMessage.setUserId(loginUser.getId());
