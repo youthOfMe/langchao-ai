@@ -187,6 +187,11 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         boolean saveUserMes = this.save(message);
         ThrowUtils.throwIf(!saveUserMes, ErrorCode.SYSTEM_ERROR, "发送消息失败！");
 
+        if (Objects.equals(chatWindows.getTitle(), "新建对话")) {
+            chatWindows.setTitle(content);
+            chatWindowsService.updateById(chatWindows);
+        }
+
         // todo 发送消息给AI
         long aiModeId = 1813472675464413185L;
         // 调用 AI

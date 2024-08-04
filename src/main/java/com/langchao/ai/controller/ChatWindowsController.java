@@ -15,13 +15,17 @@ import com.langchao.ai.model.dto.chatwindows.ChatWindowsEditRequest;
 import com.langchao.ai.model.dto.chatwindows.ChatWindowsQueryRequest;
 import com.langchao.ai.model.dto.chatwindows.ChatWindowsUpdateRequest;
 import com.langchao.ai.model.entity.ChatWindows;
+import com.langchao.ai.model.entity.Message;
 import com.langchao.ai.model.entity.User;
 import com.langchao.ai.model.enums.ChatWindowsEnum;
 import com.langchao.ai.model.vo.ChatWindowsVO;
 import com.langchao.ai.service.ChatWindowsService;
+import com.langchao.ai.service.MessageService;
 import com.langchao.ai.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -40,6 +44,10 @@ public class ChatWindowsController {
 
     @Resource
     private ChatWindowsService chatWindowsService;
+
+    @Resource
+    @Lazy
+    private MessageService messageService;
 
     @Resource
     private UserService userService;
@@ -121,6 +129,7 @@ public class ChatWindowsController {
      * @return
      */
     @PostMapping("/delete")
+    @Transactional(rollbackFor = Exception.class)
     public BaseResponse<Boolean> deleteChatWindows(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -135,7 +144,11 @@ public class ChatWindowsController {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         boolean b = chatWindowsService.removeById(id);
-        return ResultUtils.success(b);
+        // 级联删除所有消息
+        QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("chatWindowId", oldChatWindows.getId());
+        boolean remove = messageService.remove(queryWrapper);
+        return ResultUtils.success(b && remove);
     }
 
     /**
