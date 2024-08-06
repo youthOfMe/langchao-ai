@@ -167,6 +167,10 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
     public MessageSendVO sendMessage(MessageSendRequest messageSendRequest, HttpServletRequest request) {
         // 校验是否登录
         User loginUser = userService.getLoginUser(request);
+
+        // 启动限流器
+        redisLimitManager.doRateLimit("sendMessageByAi_" + loginUser.getId(),1, 5);
+
         // 校验消息
         String content = messageSendRequest.getContent();
         ThrowUtils.throwIf(StringUtils.isEmpty(content), ErrorCode.PARAMS_ERROR, "消息不可为空！");
@@ -182,8 +186,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         MessageEnum enumByValue = MessageEnum.getEnumByValue(type);
         ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "消息类型不合法");
 
-        // 启动限流器
-        redisLimitManager.doRateLimit("sendMessageByAi_" + loginUser.getId());
+        // 查询会话状态
+        Integer canSend = chatWindows.getCanSend();
+        ThrowUtils.throwIf(canSend == 1, ErrorCode.OPERATION_ERROR, "AI消息正在生成中！");
 
         // 存入消息
         Message message = new Message();
@@ -198,6 +203,10 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
             chatWindows.setTitle(content);
             chatWindowsService.updateById(chatWindows);
         }
+
+        // 改变会话状态 不允许用户在正在生成中的时候进行调用会话AI
+        chatWindows.setCanSend(1);
+        chatWindowsService.updateById(chatWindows);
 
         // 查询出来上一次AI发了什么
         QueryWrapper<Message> messageQueryWrapper = new QueryWrapper<>();
@@ -235,6 +244,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         if (oldChatWindows == null) {
             return null;
         }
+
         // 存储AI信息调用信息
         Message aiMessage = new Message();
         aiMessage.setUserId(loginUser.getId());
@@ -243,6 +253,10 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         aiMessage.setContent(result);
         boolean saveAiMes = this.save(aiMessage);
         ThrowUtils.throwIf(!saveAiMes, ErrorCode.SYSTEM_ERROR, "AI调用失败！");
+
+        // 还原会话状态
+        chatWindows.setCanSend(0);
+        chatWindowsService.updateById(chatWindows);
 
         // 构造返回信息
         MessageSendVO messageSendVO = new MessageSendVO();
