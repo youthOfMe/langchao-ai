@@ -8,6 +8,7 @@ import com.langchao.ai.common.ErrorCode;
 import com.langchao.ai.constant.CommonConstant;
 import com.langchao.ai.exception.BusinessException;
 import com.langchao.ai.exception.ThrowUtils;
+import com.langchao.ai.manager.RedisLimitManager;
 import com.langchao.ai.mapper.ChatWindowsMapper;
 import com.langchao.ai.model.dto.chatwindows.ChatWindowsQueryRequest;
 import com.langchao.ai.model.entity.ChatWindows;
@@ -36,6 +37,12 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private RedisLimitManager redisLimitManager;
+
+    // 创建窗口时的锁
+    private static final String CHAT_WINDOW_USER_ID_KEY = "chat_window_user_id_key";
 
     @Override
     public void validChatWindows(ChatWindows chatWindows, boolean add) {
@@ -103,8 +110,21 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
 
     @Override
     public Long createChatWindows(Integer type, User loginUser, String title) {
+
+        Long userId = loginUser.getId();
+
+        // 限流器 限制一个用户三秒内只能访问一次
+        redisLimitManager.doRateLimit(CHAT_WINDOW_USER_ID_KEY + userId, 1, 3);
+
+        // 限制用户可以创建窗口的数量 最多创建十个
+        QueryWrapper<ChatWindows> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userId", userId);
+        long chatWindowCount = this.count(queryWrapper);
+        ThrowUtils.throwIf(chatWindowCount > 10, ErrorCode.OPERATION_ERROR, "您最多创建十个窗口！");
+
+        // 创建窗口
         ChatWindows chatWindows = new ChatWindows();
-        chatWindows.setUserId(loginUser.getId());
+        chatWindows.setUserId(userId);
         chatWindows.setTitle(title);
         chatWindows.setType(type);
         boolean isSuccess = this.save(chatWindows);
