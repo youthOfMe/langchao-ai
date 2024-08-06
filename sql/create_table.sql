@@ -59,3 +59,16 @@ create table if not exists reject_task
     updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete     tinyint      default 0                 not null comment '是否删除',
 ) comment '消息表' collate = utf8mb4_unicode_ci;
+
+-- 模型表
+create table if not exists model
+(
+    id           bigint auto_increment comment 'id' primary key,
+    userId  bigint                           not null comment '用户ID',
+    `type`  tinyint                          not null comment '模型类型 0 = 官方模型 1 = 民间模型',
+    name varchar(128)                       not null comment '模型名称',
+    desc varchar(512)                       not null comment '模型描述',
+    createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete     tinyint      default 0                 not null comment '是否删除',
+) comment '窗口表' collate = utf8mb4_unicode_ci;
