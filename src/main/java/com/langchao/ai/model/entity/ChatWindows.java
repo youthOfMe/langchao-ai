@@ -25,6 +25,11 @@ public class ChatWindows implements Serializable {
     private Long userId;
 
     /**
+     * 模型ID
+     */
+    private Long modelId;
+
+    /**
      * 窗口类型 1 = 紧急政务窗口 0 = 普通窗口
      */
     private Integer type;

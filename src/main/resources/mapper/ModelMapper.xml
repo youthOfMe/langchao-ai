@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.langchao.ai.mapper.ModelMapper">
+
+    <resultMap id="BaseResultMap" type="com.langchao.ai.model.entity.Model">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="userId" jdbcType="BIGINT"/>
+            <result property="type" column="type" jdbcType="TINYINT"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="systemPrompt" column="systemPrompt" jdbcType="VARCHAR"/>
+            <result property="coverUrl" column="coverUrl" jdbcType="VARCHAR"/>
+            <result property="introduce" column="introduce" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="conversation" column="conversation" jdbcType="VARCHAR"/>
+            <result property="category" column="category" jdbcType="VARCHAR"/>
+            <result property="visable" column="visable" jdbcType="TINYINT"/>
+            <result property="preMessage" column="preMessage" jdbcType="VARCHAR"/>
+            <result property="linkedMessage" column="linkedMessage" jdbcType="SMALLINT"/>
+            <result property="random" column="random" jdbcType="SMALLINT"/>
+            <result property="fresh" column="fresh" jdbcType="SMALLINT"/>
+            <result property="repeatNum" column="repeatNum" jdbcType="SMALLINT"/>
+            <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+            <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+            <result property="isDelete" column="isDelete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,userId,type,
+        name,systemPrompt,coverUrl,
+        introduce,description,conversation,
+        category,visable,preMessage,
+        linkedMessage,random,fresh,
+        repeatNum,createTime,updateTime,
+        isDelete
+    </sql>
+</mapper>
