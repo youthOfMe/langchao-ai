@@ -109,7 +109,7 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
     }
 
     @Override
-    public Long createChatWindows(Integer type, User loginUser, String title) {
+    public Long createChatWindows(Integer type, User loginUser, String title, Long modelId) {
 
         Long userId = loginUser.getId();
 
@@ -127,6 +127,7 @@ public class ChatWindowsServiceImpl extends ServiceImpl<ChatWindowsMapper, ChatW
         chatWindows.setUserId(userId);
         chatWindows.setTitle(title);
         chatWindows.setType(type);
+        chatWindows.setModelId(modelId);
         boolean isSuccess = this.save(chatWindows);
         ThrowUtils.throwIf(!isSuccess, ErrorCode.SYSTEM_ERROR, "创建会话失败！");
 

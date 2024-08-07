@@ -16,11 +16,13 @@ import com.langchao.ai.model.dto.chatwindows.ChatWindowsQueryRequest;
 import com.langchao.ai.model.dto.chatwindows.ChatWindowsUpdateRequest;
 import com.langchao.ai.model.entity.ChatWindows;
 import com.langchao.ai.model.entity.Message;
+import com.langchao.ai.model.entity.Model;
 import com.langchao.ai.model.entity.User;
 import com.langchao.ai.model.enums.ChatWindowsEnum;
 import com.langchao.ai.model.vo.ChatWindowsVO;
 import com.langchao.ai.service.ChatWindowsService;
 import com.langchao.ai.service.MessageService;
+import com.langchao.ai.service.ModelService;
 import com.langchao.ai.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -52,6 +54,9 @@ public class ChatWindowsController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private ModelService modelService;
+
     /**
      * 创建会话
      *
@@ -60,13 +65,13 @@ public class ChatWindowsController {
      * @return
      */
     @PostMapping("/create")
-    public BaseResponse<Long> createChatWindows(@RequestParam("type") Integer type, String title, HttpServletRequest request) {
+    public BaseResponse<Long> createChatWindows(@RequestParam("type") Integer type, String title, Long modelId, HttpServletRequest request) {
         // 校验参数
         ChatWindowsEnum enumByValue = ChatWindowsEnum.getEnumByValue(type);
         ThrowUtils.throwIf(enumByValue == null, ErrorCode.PARAMS_ERROR, "类型参数错误！");
         // 判断用户是否登录
         User loginUser = userService.getLoginUser(request);
-        Long chatWindows = chatWindowsService.createChatWindows(type, loginUser, title);
+        Long chatWindows = chatWindowsService.createChatWindows(type, loginUser, title, modelId);
         return ResultUtils.success(chatWindows);
     }
 
@@ -76,10 +81,18 @@ public class ChatWindowsController {
      * @return
      */
     @GetMapping("/mylist")
-    public BaseResponse<List<ChatWindowsVO>> listMyChatWindows(HttpServletRequest request) {
+    public BaseResponse<List<ChatWindowsVO>> listMyChatWindows(Long modelId, HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(modelId < 0, ErrorCode.PARAMS_ERROR, "模型ID错误！");
+
+        // 校验模型是否存在
+        Model model = modelService.getById(modelId);
+        if (modelId != 10086) {
+            ThrowUtils.throwIf(model == null, ErrorCode.PARAMS_ERROR, "模型不存在！");
+        }
         // 查询本人的聊天列表
         QueryWrapper<ChatWindows> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("modelId", modelId);
         queryWrapper.eq("userId", loginUser.getId());
         List<ChatWindows> chatWindowList = chatWindowsService.list(queryWrapper);
         List<ChatWindowsVO> chatWindowsVOList = new ArrayList<>();

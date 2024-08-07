@@ -57,5 +57,5 @@ public interface ChatWindowsService extends IService<ChatWindows> {
      * @param loginUser
      * @return
      */
-    Long createChatWindows(Integer type, User loginUser, String title);
+    Long createChatWindows(Integer type, User loginUser, String title, Long model);
 }
